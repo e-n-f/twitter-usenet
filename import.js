@@ -106,6 +106,38 @@ function wrap(s) {
 	return out;
 }
 
+function pad(t) {
+	if (t < 10) {
+		return "0" + t;
+	} else {
+		return t;
+	}
+}
+
+function todate(milli) {
+	let d = new Date(milli);
+	let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+	let out =
+		days[d.getDay()] +
+		", " +
+		d.getDate() +
+		" " +
+		months[d.getMonth()] +
+		" " +
+		(d.getYear() + 1900) +
+		" " +
+		pad(d.getHours()) +
+		":" +
+		pad(d.getMinutes()) +
+		":" +
+		pad(d.getSeconds()) +
+		" +0000";
+
+	return out;
+}
+
 async function convert(text, active) {
 	if ("timestamp_ms" in text) {
 		if ("extended_tweet" in text) {
@@ -121,6 +153,7 @@ async function convert(text, active) {
 		if (text.in_reply_to_status_id_str != null) {
 			out += "References: <" + text.in_reply_to_status_id_str + "@twitter.com>\n";
 		}
+		out += "Date: " + todate(Number(text.timestamp_ms)) + "\n";
 		out += "Newsgroups: misc\n";
 		out += "\n";
 
