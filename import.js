@@ -122,8 +122,31 @@ async function convert(text, active) {
 			out += "References: <" + text.in_reply_to_status_id_str + "@twitter.com>\n";
 		}
 		out += "Newsgroups: misc\n";
-
 		out += "\n";
+
+		if (text.in_reply_to_screen_name != null) {
+			if (text.in_reply_to_status_id_str in quotetext) {
+				out +=
+					"In article <" +
+					text.in_reply_to_status_id_str +
+					"@twitter.com>, " +
+					text.in_reply_to_screen_name +
+					" wrote:\n";
+				let quoted = wrap(quotetext[text.in_reply_to_status_id_str]);
+
+				let i;
+				for (i = 0; i < quoted.length; i++) {
+					if (i == 0 || quoted.charAt(i - 1) == "\n") {
+						out += "> ";
+					}
+
+					out += quoted.charAt(i);
+				}
+
+				out += "\n";
+			}
+		}
+
 		out += wrap(text.text);
 		out += "\n\n";
 
