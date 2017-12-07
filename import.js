@@ -20,6 +20,92 @@ async function read_active() {
 
 let quotetext = {};
 
+function quotename(s) {
+	let out = '"';
+
+	let i;
+	for (i = 0; i < s.length; i++) {
+		if (s.charAt(i) == '"') {
+			out += '\\"';
+		} else if (s.charAt(i) <= "~") {
+			out += s.charAt(i);
+		} else {
+			out += "?"; // XXX charset
+		}
+	}
+
+	out += '"';
+
+	return out;
+}
+
+// XXX this is a mess
+function trimtext(s) {
+	let out = "";
+
+	let word = "";
+	let i;
+	for (i = 0; i < s.length; i++) {
+		if (s.charAt(i) > " ") {
+			word += s.charAt(i);
+		} else {
+			if (out.length + word.length < 50) {
+				out += word + " ";
+				word = "";
+			} else {
+				break;
+			}
+		}
+	}
+
+	if (out.length + word.length < 50) {
+		out += word + " ";
+	}
+
+	return out;
+}
+
+// XXX this is a mess
+function wrap(s) {
+	let out = "";
+	let line = "";
+	let word = "";
+
+	let i;
+	for (i = 0; i < s.length; i++) {
+		if (s.charAt(i) > " ") {
+			word += s.charAt(i);
+		} else if (s.charAt(i) == "\n") {
+			if (line.length + word.length < 72) {
+				out += line + word + "\n";
+				line = "";
+				word = "";
+			} else {
+				out += line + "\n" + word + "\n";
+				line = "";
+				word = "";
+			}
+		} else {
+			if (line.length + word.length < 72) {
+				line += word + " ";
+				word = "";
+			} else {
+				out += line + "\n";
+				line = word + " ";
+				word = "";
+			}
+		}
+	}
+
+	if (line.length + word.length < 72) {
+		out += line + word + "\n";
+	} else {
+		out += line + "\n" + word + "\n";
+	}
+
+	return out;
+}
+
 async function convert(text, active) {
 	if ("timestamp_ms" in text) {
 		if ("extended_tweet" in text) {
@@ -28,7 +114,18 @@ async function convert(text, active) {
 
 		quotetext[text.id_str] = text.text;
 
-		let out = "From: " + text.user.name + " <" + text.user.screen_name + "@twitter.com>\n";
+		let out = "From: " + quotename(text.user.name) + " <" + text.user.screen_name + "@twitter.com>\n";
+		out += "Subject: " + trimtext(text.text) + "\n";
+		out += "Message-ID: <" + text.id_str + "@twitter.com>\n";
+
+		if (text.in_reply_to_status_id_str != null) {
+			out += "References: <" + text.in_reply_to_status_id_str + "@twitter.com>\n";
+		}
+		out += "Newsgroups: misc\n";
+
+		out += "\n";
+		out += wrap(text.text);
+		out += "\n\n";
 
 		await unixio.stdout.puts(out);
 	}
