@@ -3,10 +3,14 @@
 "use strict";
 
 let unixio = require("unixio");
+let fsextra = require("fs-extra");
+
+let home = process.env.HOME;
+let tweets = home + "/tweets";
 
 async function read_active() {
 	let ret = {};
-	let fp = await unixio.fopen("../tweets/.active", "r");
+	let fp = await unixio.fopen(tweets + "/.active", "r");
 
 	let s;
 	while ((s = await fp.gets()) != null) {
@@ -144,17 +148,34 @@ async function convert(text, active) {
 			text.text = text.extended_tweet.full_text;
 		}
 
+		if (text.id_str in quotetext) {
+			return;
+		}
+
 		quotetext[text.id_str] = text.text;
 
-		let out = "From: " + quotename(text.user.name) + " <" + text.user.screen_name + "@twitter.com>\n";
-		out += "Subject: " + trimtext(text.text) + "\n";
-		out += "Message-ID: <" + text.id_str + "@twitter.com>\n";
+		let user = quotename(text.user.name) + " <" + text.user.screen_name + "@twitter.com>";
+		let subject = trimtext(text.text);
+		let date = todate(Number(text.timestamp_ms));
+		let msgid = "<" + text.id_str + "@twitter.com>";
+		let refs = "<" + text.in_reply_to_status_id_str + "@twitter.com>";
+		let newsgroup = "misc";
 
-		if (text.in_reply_to_status_id_str != null) {
-			out += "References: <" + text.in_reply_to_status_id_str + "@twitter.com>\n";
+		let id;
+		if (newsgroup in active) {
+			id = ++active[newsgroup];
+		} else {
+			active[newsgroup] = 1;
+			id = 1;
 		}
-		out += "Date: " + todate(Number(text.timestamp_ms)) + "\n";
-		out += "Newsgroups: misc\n";
+
+		let out = "";
+		out += "From: " + user + "\n";
+		out += "Subject: " + subject + "\n";
+		out += "Date: " + date + "\n";
+		out += "Message-ID: " + msgid + "\n";
+		out += "References: " + refs + "\n";
+		out += "Newsgroups: " + newsgroup + "\n";
 		out += "\n";
 
 		if (text.in_reply_to_screen_name != null) {
@@ -180,10 +201,31 @@ async function convert(text, active) {
 			}
 		}
 
-		out += wrap(text.text);
-		out += "\n\n";
+		out += wrap(text.text) + "\n";
 
-		await unixio.stdout.puts(out);
+		try {
+			await fsextra.mkdir(tweets + "/" + newsgroup);
+		} catch (e) {
+			// should fail if it already exists
+		}
+
+		let fp = await unixio.fopen(tweets + "/" + newsgroup + "/" + id, "w");
+		await fp.puts(out);
+		await fp.close();
+
+		let bytes = Buffer.from(out).length;
+		let lines = 0;
+
+		let i;
+		for (i = 0; i < out.length; i++) {
+			if (out.charAt(i) == "\n") {
+				lines++;
+			}
+		}
+
+		fp = await unixio.fopen(tweets + "/" + newsgroup + "/.overview", "a");
+		fp.puts(id + "\t" + subject + "\t" + user + "\t" + date + "\t" + msgid + "\t" + bytes + "\t" + lines + "\n");
+		await fp.close();
 	}
 }
 
@@ -251,7 +293,7 @@ function nextjson(s, i) {
 	return i;
 }
 
-async function process(s, active) {
+async function handle(s, active) {
 	let i = 0;
 	let here = 0;
 
@@ -263,7 +305,7 @@ async function process(s, active) {
 		}
 
 		if (s.charAt(here) == "[") {
-			await process(s.substring(here + 1, i - 1), active);
+			await handle(s.substring(here + 1, i - 1), active);
 		} else {
 			if (here != i && s.substring(here, i) != "," && s.substring(here, i) != "\n" && s.substring(here, i) != " ") {
 				let j;
@@ -292,8 +334,16 @@ async function main() {
 
 	let s;
 	while ((s = await unixio.stdin.gets()) != null) {
-		await process(s, active);
+		await handle(s, active);
 	}
+
+	let fp = await unixio.fopen(tweets + "/.active", "w");
+	let keys = Object.keys(active);
+	let i;
+	for (i = 0; i < keys.length; i++) {
+		await fp.puts(keys[i] + " " + active[keys[i]] + " 1 n\n");
+	}
+	await fp.close();
 }
 
 unixio.call(main);
