@@ -1,0 +1,21 @@
+{
+  "name": "twitter-usenet",
+  "version": "0.0.1",
+  "description": "Turn Twitter into Usenet",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/ericfischer/twitter-usenet"
+  },
+  "keywords": [
+    "tools"
+  ],
+  "dependencies": {
+    "unixio": "^0.5.3"
+  },
+  "author": "Eric Fischer",
+  "license": "BSD-2-Clause"
+}
