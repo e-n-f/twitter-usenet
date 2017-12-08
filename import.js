@@ -145,7 +145,25 @@ function todate(milli) {
 async function convert(text, active) {
 	if ("timestamp_ms" in text) {
 		if ("retweeted_status" in text) {
+			if (! ("timestamp_ms" in text.retweeted_status)) {
+				// Why doesn't this have its own time stamp?
+				text.retweeted_status.timestamp_ms = text.timestamp_ms;
+			}
+
 			return await convert(text.retweeted_status, active);
+		}
+
+		if ("quoted_status" in text) {
+			if (! ("timestamp_ms" in text.quoted_status)) {
+				// Why doesn't this have its own time stamp?
+				text.quoted_status.timestamp_ms = text.timestamp_ms;
+			}
+
+			await convert(text.quoted_status, active);
+
+			if (text.in_reply_to_status_id_str == null) {
+				text.in_reply_to_status_id_str = text.quoted_status_id_str;
+			}
 		}
 
 		if ("extended_tweet" in text) {
