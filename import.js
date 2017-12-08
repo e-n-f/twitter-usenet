@@ -161,6 +161,10 @@ async function convert(text, active) {
 		let refs = "<" + text.in_reply_to_status_id_str + "@twitter.com>";
 		let newsgroup = "misc";
 
+		if (text.in_reply_to_status_id_str == null) {
+			refs = "";
+		}
+
 		let id;
 		if (newsgroup in active) {
 			id = ++active[newsgroup];
@@ -174,7 +178,11 @@ async function convert(text, active) {
 		out += "Subject: " + subject + "\n";
 		out += "Date: " + date + "\n";
 		out += "Message-ID: " + msgid + "\n";
-		out += "References: " + refs + "\n";
+
+		if (refs != "") {
+			out += "References: " + refs + "\n";
+		}
+
 		out += "Newsgroups: " + newsgroup + "\n";
 		out += "\n";
 
@@ -224,7 +232,7 @@ async function convert(text, active) {
 		}
 
 		fp = await unixio.fopen(tweets + "/" + newsgroup + "/.overview", "a");
-		fp.puts(id + "\t" + subject + "\t" + user + "\t" + date + "\t" + msgid + "\t" + bytes + "\t" + lines + "\n");
+		fp.puts(id + "\t" + subject + "\t" + user + "\t" + date + "\t" + msgid + "\t" + refs + "\t" + bytes + "\t" + lines + "\n");
 		await fp.close();
 	}
 }
