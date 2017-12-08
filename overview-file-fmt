@@ -1,0 +1,288 @@
+
+   Mailgate.ORG Web Server [Previous] [Next] [Reply] [Index] [Home]
+   [Find] 
+   
+                                  IFRAME:
+   http://ad.activeadv.net/html.ng/params.richmedia=yes&site=mail&sezione
+                           =mail-genr&pos=ban-std
+                   Clicca qui per maggiori informazioni 
+                                      
+     * Newsgroups: news.software.b, news.software.nntp,
+       news.software.readers
+     * From: usenet@agate.Berkeley.EDU ()
+     * Subject: FAQ: Overview database / NOV General Information
+     * Date: 2 Jul 1998 10:02:01 -0000
+     * Organization: University of California, Berkeley
+     * Expires: 08/03/98
+     * Reply-To: usenet@agate.Berkeley.EDU (Usenet FAQ Poster)
+     _________________________________________________________________
+   
+Posted-By: auto-faq 2.4
+Archive-name: nov-faq
+
+                          Table Of Contents:
+                          ------------------
+
+        What is `threading' and why is it good for you?
+        What is the Overview/NOV database?
+        What is the format of the NOV database?
+        What optional headers should I configure into the NOV database?
+        What is XOVER?
+        How do I know if my NNTP server does XOVER?
+        What does it buy me?
+        How much disc space does the Overview database take up?
+        What News Transport Systems support NOV/XOVER and where can I
+                get it?
+        What Newsreaders Support NOV/XOVER?
+        Is there a reference threading implementation for NOV?
+        Any tips on configuring the Overview database?
+        Contributions to NOV FAQ.
+
+------------------------------
+
+Subject: What is `threading' and why is it good for you?
+
+I put this in first as a background question.
+
+As news volume has grown in the last couple of years, the organization
+of the data presented to the user has become more important.  With the
+possibility of being presented with several hundred articles to read
+in a newsgroup, newer newsreaders have incorporated features that
+organize things by subject, and sort them in the order posted, and
+`thread' articles in groups according to who replied to who.  Note
+there is a difference between subject sorting and date sorting, and
+threading.
+
+This subject sorting and threading can be expensive using normal
+NNTP commands, as it involves opening each article and transferring it
+over to the client, for a relatively small bit of information.  This
+led to newsreader authors extending the NNTP command set so that they
+could set up an auxiliary database of just the information they
+needed.  The database would be updated as news arrived on the server,
+and when a client requested thread information about a particular
+group, it would just open one file and send it out, which made things
+pretty zippy.
+
+The downside of this, was that every newsreader had their own
+threading database, their own specialized NNTP extension, and it was
+customized to their `way' of doing threads.  Trn, NN, and tin are
+prime examples.  Each database occupies a fair amount of space, and
+in the case of trn and tin, the daemons that maintain the databases
+use up a nontrivial amount of system resources.
+
+------------------------------
+
+Subject: What is the Overview/NOV database?
+
+The Overview or News OverView (NOV) database was designed by Geoff
+Collyer.  It's a more generalized database, in that it contains *no*
+threading information, just the information needed to thread.  The
+overview database is just a database of files, one for each group,
+containing a reference to each article, with seven or eight of the
+most popular headers.  Thus, the newsreader client can get most of the
+information it needs to thread, but it does the threading the way it
+wants to.  Yes, the downside is that now the threading occurs on the
+client's CPU, but that's not as expensive as it may seem, if done
+properly.
+
+------------------------------
+
+Subject: What is the format of the NOV database?
+
+[this is stolen from Geoff Collyer's newsoverview(5) man page]
+
+Each newsgroup directory contains a file named  `.overview',
+containing  one-line  summaries  of  articles in that group.  Fields
+are separated by tabs, and any tabs  or  newlines  in the  original
+articles  headers  have  been  replaced  with spaces.  The fields are,
+in  order:  article  number  (file name),  subject,  author, date,
+message-id, references, byte  count, line count, and optionally other
+headers, as arranged  locally  (none  are  supplied  by  the  database
+maintenance software, as shipped).  The line-count and references
+field may  be  empty.   If the optional other headers are present,
+they include their header keyword and  colon;  if  they  are absent
+entirely, the tab after the line-count field may also be absent.
+
+ie:
+
+    artid|subject|From|Date|Message-Id|References|bytecount|linecount|\
+                Optional-Header: Stuff
+
+where | represents a tab and \ a line continuation (there are no
+continuation lines in the Overview entry, it's just so that the above
+line fits in 80 columns).
+
+Remember that header keywords in optional headers should be matched
+case insensitively.
+
+------------------------------
+
+Subject: What optional headers should I configure into the NOV database?
+
+It's nice to configure the pseudo-header Xref: in.  Xref: is a site
+specific header that, if present, tells where that are article has been
+cross posted.  It is useful for newsreaders who want to kill cross
+posted articles, you've told them to kill.
+
+------------------------------
+
+Subject: What is XOVER?
+
+XOVER is an NNTP extension for accessing the Overview database.  It
+is becoming a defacto standard for accessing bulk header/thread
+information via NNTP.
+
+It is used after establishing a current group with the GROUP command,
+and operations on that group.  It's syntax is
+
+        XOVER artnumber1[-artnumber2]
+
+Where artnumber1 is < artnumber2.  If successful, it returns a 224
+reply code, and the overview data [as in the Overview database] for
+the requested articles.  It is terminated by a "." (dot) on a line by
+itself.
+
+NNTP servers implementing the XOVER command should try to ensure that
+the data is as consistent as possible, they should avoid handing out
+XOVER information for articles that don't exist, and should generate
+XOVER information on the fly for articles that do exist, but aren't
+found in the Overview database for some reason.  While the job of
+XOVER is to provide access to the Overview database, validating the
+Overview data is best done in the NNTP server, rather than having the
+NNTP client go through contortions to do it.
+
+------------------------------
+
+Subject: How do I know if my NNTP server does XOVER?
+
+By initially trying it, and looking at the response code.  Before
+doing a GROUP in your session, you should get back a 500 (no such
+command) response if the server doesn't implement XOVER, and a 412
+(not in a newsgroup) response, if it does.
+
+------------------------------
+
+Subject: What does it buy me?
+
+Speed, if you have newsreader clients that can take advantage of this,
+disc space if you are currently supporting more than one version of a
+threading database.
+
+If used by the NNTP daemon, XHDR can be speed up by *orders* of
+magnitude by using the Overview database.
+
+------------------------------
+
+Subject: How much disc space does the Overview database take up?
+
+About 10% of what your news spool space is.
+
+------------------------------
+
+Subject: What News Transport Systems support NOV/XOVER and where can I
+         get it?
+
+INN 1.4 and greater supports the Overview database and XOVER right out
+of the box.
+
+The Performance release of C News (October 18th, 1994) supports the
+Overview database.  To use the XOVER extension with C News and NNTP,
+you need Stan Barber's NNTP reference package  (via ftp via ftp.uu.net
+in /networking/news/nntp/nntp.1.5.12.1.tar.Z).
+
+HighWind Software's commercial News Server solutions: "Typhoon" and
+"Breeze" fully support the NOV/XOVER standard. They can be obtained at
+HighWind's web site: http://www.highwind.com/
+
+------------------------------
+
+Subject: What Newsreaders Support NOV/XOVER?
+
+Among `officially released' newsreaders trn3.6 and later, slrn, and tin-1.22
+support both the Overview database and XOVER.
+
+Win-VN 99.07 for MS-Windows supports XOVER [Alan Thew].
+
+RNR v1.25 and up for MS-DOS support the Overview database
+         [Russell Schulz].
+
+Netscape, the WEB browser, supports XOVER.
+
+As of version 1.00 Free Agent supports XOVER.
+
+Geoff has modified `proof of concept' newsreaders in
+ftp.std.com:/src/news/ that support the Overview database (*not*
+XOVER).  These are getting rather long in the tooth.
+
+Version 6.5.0 of NN (which is in late beta) is fully NOV capable.  It
+is available from ftp://ftp.uwa.edu.au/pub/nn/beta/nn-6.5.0.b3.tar.gz.
+
+There are some excellent patches by Felix Lee that allow GNUS to
+support XOVER (plus some kool async transfer mods).  Perhaps he'll
+post them again soon.  Perhaps they will be integrated into GNUS.
+
+Ding, an offshoot of GNUS supports XOVER.
+
+------------------------------
+
+Subject:  Is there a reference threading implementation for NOV data?
+
+Yes, in Geoff Collyer's package at
+ftp.std.com:/src/news/nov.dist.tar.gz.
+
+------------------------------
+
+Subject: Any tips on configuring the Overview database?
+
+It's probably a good idea to configure in the optional pseudo header
+Xref:, as many newsreaders like to see it.
+
+Make sure you put the .overview files somewhere besides where you put
+the articles (normally /usr/spool/news).  If, for example,
+/usr/spool/news/news/answers has 10,000 articles plus the ".overview"
+file, then the open() call may need to search through up to 10,001
+filenames  to find the ".overview" file.  If, instead, you put the
+overview database info /usr/spool/news/over.view then the ".overview"
+file could be found almost instantly.  Part 3 of the INN FAQ has tips
+on making this change for INN.
+
+If newsreading is totally limited to NNTP, you might want to consider
+putting your Overview database on another partition on another disc
+(if you have space).  This buys you more room for news on your spool
+disc, and also spreads the disc accesses out across multiple drives,
+reducing the beating your spool partition is going to take.
+
+------------------------------
+
+Subject: Contributions to NOV FAQ.
+
+Thanks to the following for contributions, additions, corrections, and
+updates:
+
+    Jerry Aguirre <jerry@strobe.ATC.Olivetti.Com>
+    Geoff Collyer <geoff@world.std.com>
+    Wayne Davison <davison@trn.com>
+    Christopher Davis <ckd@eff.org>
+    Jason Haar <j.haar@cantva.canterbury.ac.nz>
+    Damon Hart-Davis <d@exnet.co.uk>
+    Andrei Ivanov <iva@lynx.riga.lv>
+    Iain Lea <iain@anl433.erlm.siemens.de>
+    Tom Limoncelli <tal@plts.org>
+    Mark Linimon <linimon@nominil.lonesome.com>
+    J.B. Nicholson-Owens <jbn@mystery-train.msilink.com>
+    Doug Sewell <doug@cc.ysu.edu>
+    Russell Schulz <Russell_Schulz@locutus.ofB.ORG>
+    Alan Thew <News.Admin@liverpool.ac.uk>
+    Vince Vielhaber <vev@cinnamon.michvhf.com>
+    FUNASAKA Junichi <zyunit-h@is.aist-nara.ac.jp>
+
+This NOV FAQ was originally written by Rob Robertson <robr@hotwired.com>
+and is now maintained by UC Berkeley Communication and Network Services.
+This posting, like much of Usenet, is maintained on a purely volunteer
+basis.  Reactions, additions, and corrections are welcome via email at
+usenet@agate.berkeley.edu
+     _________________________________________________________________
+   
+   Mailgate.ORG Web Server [Previous] [Next] [Reply] [Index] [Home]
+   [Find] 
+   Mailgate.ORG is maintained online by Dario Centofanti
