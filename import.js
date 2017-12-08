@@ -144,6 +144,10 @@ function todate(milli) {
 
 async function convert(text, active) {
 	if ("timestamp_ms" in text) {
+		if ("retweeted_status" in text) {
+			return await convert(text.retweeted_status, active);
+		}
+
 		if ("extended_tweet" in text) {
 			text.text = text.extended_tweet.full_text;
 		}
