@@ -143,20 +143,32 @@ function todate(milli) {
 }
 
 async function convert(text, active) {
-	if ("timestamp_ms" in text) {
+	if ("created_at" in text && !("timestamp_ms" in text)) {
+		// Thu Nov 09 09:00:03 +0000 2017
+
+		let d = text.created_at;
+
+		let ndate = d.substring(0, 11) + " " + d.substring(26, 30) + " " + d.substring(11, 26);
+
+		let d2 = Date.parse(ndate);
+
+		text.timestamp_ms = d2;
+	}
+
+	if ("text" in text) {
 		if ("retweeted_status" in text) {
-			if (! ("timestamp_ms" in text.retweeted_status)) {
+			if (!("timestamp_ms" in text.retweeted_status)) {
 				// Why doesn't this have its own time stamp?
-				text.retweeted_status.timestamp_ms = text.timestamp_ms;
+				// text.retweeted_status.timestamp_ms = text.timestamp_ms;
 			}
 
 			return await convert(text.retweeted_status, active);
 		}
 
 		if ("quoted_status" in text) {
-			if (! ("timestamp_ms" in text.quoted_status)) {
+			if (!("timestamp_ms" in text.quoted_status)) {
 				// Why doesn't this have its own time stamp?
-				text.quoted_status.timestamp_ms = text.timestamp_ms;
+				// text.quoted_status.timestamp_ms = text.timestamp_ms;
 			}
 
 			await convert(text.quoted_status, active);
@@ -256,6 +268,8 @@ async function convert(text, active) {
 		fp = await unixio.fopen(tweets + "/" + newsgroup + "/.overview", "a");
 		fp.puts(id + "\t" + subject + "\t" + user + "\t" + date + "\t" + msgid + "\t" + refs + "\t" + bytes + "\t" + lines + "\n");
 		await fp.close();
+	} else {
+		// await unixio.stdout.puts(JSON.stringify(text) + "\n");
 	}
 }
 
