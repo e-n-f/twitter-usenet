@@ -123,6 +123,11 @@ function todate(milli) {
 	let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 	let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+	let zone = -d.getTimezoneOffset() / 60 * 100;
+	if (zone >= 0) {
+		zone = "+" + zone;
+	}
+
 	let out =
 		days[d.getDay()] +
 		", " +
@@ -137,7 +142,8 @@ function todate(milli) {
 		pad(d.getMinutes()) +
 		":" +
 		pad(d.getSeconds()) +
-		" +0000";
+		" " +
+		zone;
 
 	return out;
 }
