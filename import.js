@@ -51,7 +51,11 @@ function trimtext(s) {
 	let i;
 	for (i = 0; i < s.length; i++) {
 		if (s.charAt(i) > " ") {
-			word += s.charAt(i);
+			if (s.charAt(i) <= "~") {
+				word += s.charAt(i);
+			} else {
+				word += "?";
+			}
 		} else {
 			if (out.length + word.length < 50) {
 				out += word + " ";
@@ -78,7 +82,11 @@ function wrap(s) {
 	let i;
 	for (i = 0; i < s.length; i++) {
 		if (s.charAt(i) > " ") {
-			word += s.charAt(i);
+			if (s.charAt(i) <= "~") {
+				word += s.charAt(i);
+			} else {
+				word += "?";
+			}
 		} else if (s.charAt(i) == "\n") {
 			if (line.length + word.length < 72) {
 				out += line + word + "\n";
@@ -162,6 +170,8 @@ async function convert(text, active) {
 	}
 
 	if ("text" in text) {
+		let quoted = false;
+
 		if ("retweeted_status" in text) {
 			if (!("timestamp_ms" in text.retweeted_status)) {
 				// Why doesn't this have its own time stamp?
@@ -182,6 +192,8 @@ async function convert(text, active) {
 			if (text.in_reply_to_status_id_str == null) {
 				text.in_reply_to_status_id_str = text.quoted_status_id_str;
 			}
+
+			quoted = true;
 		}
 
 		if ("extended_tweet" in text) {
@@ -247,6 +259,20 @@ async function convert(text, active) {
 
 				out += "\n";
 			}
+		} else if (quoted) {
+			out += "In article <" + text.quoted_status_id_str + "@twitter.com>, " + text.quoted_status.user.screen_name + " wrote:\n";
+			let quoted = wrap(text.quoted_status.text);
+
+			let i;
+			for (i = 0; i < quoted.length; i++) {
+				if (i == 0 || quoted.charAt(i - 1) == "\n") {
+					out += "> ";
+				}
+
+				out += quoted.charAt(i);
+			}
+
+			out += "\n";
 		}
 
 		out += wrap(text.text) + "\n";
